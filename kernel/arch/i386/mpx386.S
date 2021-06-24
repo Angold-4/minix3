@@ -144,8 +144,8 @@ begbss:
 .global MINIX
 MINIX:
 /* this is the entry point for the MINIX kernel */
-	jmp	over_flags	/* skip over the next few bytes */
-.short	CLICK_SHIFT	/* for the monitor: memory granularity */
+	jmp	over_flags	/* skip over the next few bytes wg: start of the Minix:)*/
+.short	CLICK_SHIFT	        /* for the monitor: memory granularity */
 
 flags:
 /* boot monitor flags:
@@ -160,41 +160,52 @@ over_flags:
 
 /* Set up a C stack frame on the monitor stack.  (The monitor sets cs and ds */
 /* right.  The ss descriptor still references the monitor data segment.) */
-	movzwl	%sp, %esp	/* monitor stack is a 16 bit stack */
-	push	%ebp
-	mov	%esp, %ebp
-	push	%esi
-	push	%edi
-	cmp	$0, 4(%ebp)	/* monitor return vector is */
-	je	noret	/* nonzero if return possible */
-	incl	mon_return
+	movzwl	%sp, %esp	/* monitor stack is a 16 bit stack wg: z means zero means only the first 16-bit value were move*/
+	push	%ebp            /* wg: store the current base pointer so that after the end of Minix it back to the monitor program */
+/* wg */
+/* %sp (stack pointer): top of the stack */
+/* %bp (base  pointer): mark the start of current function's stack frame */
+	mov	%esp, %ebp      /* wg: store the stack pointer into %bp so that we can get the data that monitor store on the stack */
+	push	%esi            /* wg: %esi stands for source index register */
+	push	%edi            /* wg: %edi stands for destiny index register */
+	cmp	$0, 4(%ebp)	/* wg: since stack grows down from high memory we can get the monitor return vector by adding four */
+	je	noret	        /* wg: if return value is 0 than jump to noret */
+	incl	mon_return      /* wg: If successfully set the the return addr then set c global variable mon_return to true */
 noret:
-	movl	%esp, mon_sp	/* save stack pointer for later return */
+	movl	%esp, mon_sp	/* save stack pointer for later return wg: */
 
 /* Copy the monitor global descriptor table to the address space of kernel and */
 /* switch over to it.  Prot_init() can then update it with immediate effect. */
 
+/* wg: https://stackoverflow.com/questions/48635489/how-is-the-global-descriptor-table-copied-in-minix-assembly-code-x86 */
+/* this is a byte-at-a-time copy loop, from es:esi to ds:edi, for ecx=8*8 bytes. */
+/* cppy the GDT table (64 bytes) from absolute address to the kernel address */
 	sgdt	gdt+GDT_SELECTOR	/* get the monitor gdtr */
 	movl	gdt+GDT_SELECTOR+2, %esi	/* absolute address of GDT */
 	mov	$gdt, %ebx	/* address of kernel GDT */
-	mov	$8*8, %ecx	/* copying eight descriptors */
+	mov	$8*8, %ecx	/* wg: 8*8 bytes, %cx stand for count register */
+
+/* wg: https://www.felixcloutier.com/x86/loop:loopcc */
+/* every time loop will decrease the count register, when count register becomes 0, the loop will stop */
 copygdt:
-	movb    %es:(%esi), %al
-	movb	%al, (%ebx)
+	movb    %es:(%esi), %al /* wg: %es (extra segment) stand for segment register */
+	movb	%al, (%ebx)     /* wg: copy it to the address of kernel GDT */
 	inc	%esi
-	inc	%ebx
-	loop	copygdt
-	movl	gdt+DS_SELECTOR+2, %eax	/* base of kernel data */
-	and	$0x00FFFFFF, %eax	/* only 24 bits */
+	inc	%ebx            /* wg: increase the stored address */
+	loop	copygdt         /* copy when count register are not equal to zero */
+
+	movl	gdt+DS_SELECTOR+2, %eax	/* base of kernel data wg: (also the base of GDT table)*/
+	and	$0x00FFFFFF, %eax	/* only 24 bits wg: it only has 24 bytes so we just pick first 24 bytes */
 	add	$gdt, %eax	/* eax = vir2phys(gdt) */
 	movl	%eax, gdt+GDT_SELECTOR+2	/* set base of GDT */
 	lgdt	gdt+GDT_SELECTOR	/* switch over to kernel GDT */
 
 /* Locate boot parameters, set up kernel segment registers and stack. */
-	mov	8(%ebp), %ebx	/* boot parameters offset */
+	mov	8(%ebp), %ebx	/* boot parameters offset wg: of monitor */
 	mov	12(%ebp), %edx	/* boot parameters length */
 	mov	16(%ebp), %eax	/* address of a.out headers */
 	movl	%eax, aout
+
 	mov	%ds, %ax	/* kernel data */
 	mov	%ax, %es
 	mov	%ax, %fs
