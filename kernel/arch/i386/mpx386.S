@@ -197,6 +197,10 @@ copygdt:
 	movl	gdt+DS_SELECTOR+2, %eax	/* base of kernel data wg: (also the base of GDT table)*/
 	and	$0x00FFFFFF, %eax	/* only 24 bits wg: it only has 24 bytes so we just pick first 24 bytes */
 	add	$gdt, %eax	/* eax = vir2phys(gdt) */
+/* wg: */
+/* https://www.scs.stanford.edu/05au-cs240c/lab/i386/LGDT.htm */
+/* load global / interrupt table register */
+/* load the value to the gdtr / ldtr register */
 	movl	%eax, gdt+GDT_SELECTOR+2	/* set base of GDT */
 	lgdt	gdt+GDT_SELECTOR	/* switch over to kernel GDT */
 
