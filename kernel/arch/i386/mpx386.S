@@ -218,7 +218,7 @@ copygdt:
 	mov	$k_stktop, %esp	/* set sp to point to the top of kernel stack */
 
 /* Save boot parameters into these global variables for i386 code */
-	movl	%edx, params_size
+	movl	%edx, params_size   /* wg: the data that boot monitor stores on the stack */
 	movl	%ebx, params_offset
 	movl	$SS_SELECTOR, mon_ds
 

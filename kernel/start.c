@@ -1,6 +1,16 @@
 
 /* First C file used by the kernel. */
 
+/* This file contains the C startup code for Minix on Intel processors.
+ * It cooperates with mpx.s to set up a good environment for main()
+ *
+ * This code runs in real mode for a 16 bit kernel and may have to switch
+ * to protected mode for a 286.
+ * For a 32 bit kernel this already runs in protected mode, but the selectors
+ * are still those given by the BIOS with interrupts disabled, so the 
+ * descriptors need to be reloaded and interrupt descriptors made.
+ */
+
 #include "kernel.h"
 #include "proc.h"
 #include <stdlib.h>
